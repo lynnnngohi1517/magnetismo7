@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio virtual: Paramagnetismo</title>
+<style>
+:root{color-scheme:dark;--txt:#edf7ff;--muted:#aec7df;--cyan:#72d9ff;--blue:#3989e8;--pale:#b8e8ff;--line:#294d70}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#163e68,#071426 68%);color:var(--txt);font:15px system-ui,Segoe UI,Arial,sans-serif}
+header{text-align:center;padding:22px 15px 10px}h1{font-size:clamp(1.5rem,4vw,2.25rem);margin:0}header p{color:var(--muted);margin:7px auto;max-width:760px}
+main{max-width:1120px;margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(270px,.8fr);gap:14px}
+.panel{background:linear-gradient(145deg,#102640,#0b1b30);border:1px solid var(--line);border-radius:17px;padding:15px;box-shadow:0 12px 30px #0005}
+h2{font-size:1.08rem;margin:0 0 10px}canvas{width:100%;height:auto;display:block;background:#061426;border:1px solid #294d70;border-radius:12px;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+.note{color:var(--muted);font-size:.88rem;line-height:1.55;margin:9px 1px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{border:1px solid #4779a8;border-radius:10px;background:#173d66;color:var(--txt);padding:10px 13px;font-weight:700;cursor:pointer}button:hover{filter:brightness(1.2)}button.active{background:#126b9b;border-color:#75dfff}
+.status{background:#081a2e;border:1px solid #1f4264;border-radius:10px;padding:11px;margin-top:11px;color:#c6e5ff;line-height:1.45}
+.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.82rem;margin-top:9px}.sw{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px}
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.metric{background:#153452;padding:10px;border-radius:10px}.metric small{display:block;color:var(--muted)}.metric strong{font-size:1.2rem}
+ol{padding-left:20px;color:var(--muted);line-height:1.6}li{margin:5px 0}.tip{border-left:3px solid var(--cyan);padding:8px 10px;background:#0a2038;color:#c1def6;border-radius:0 9px 9px 0;margin-top:12px}
+@media(max-width:800px){main{grid-template-columns:1fr}.panel{padding:12px}}
+</style></head>
+<body>
+<header><h1>Laboratorio virtual: Paramagnetismo</h1><p>Acerca un imán y observa cómo los momentos magnéticos de un material paramagnético se orientan débilmente con el campo externo.</p></header>
+<main>
+<section class="panel">
+<h2>1. Acerca el imán al material</h2>
+<canvas id="scene" width="900" height="570" aria-label="Simulación de paramagnetismo; arrastra el imán hacia la muestra"></canvas>
+<div class="legend">
+<span><i class="sw" style="background:#3989e8"></i>Momentos desordenados</span>
+<span><i class="sw" style="background:#72d9ff"></i>Momentos parcialmente orientados</span>
+<span><i class="sw" style="background:#b8e8ff"></i>Campo aplicado</span>
+</div>
+<div class="row">
+<button id="near" class="active">Acercar imán</button><button id="far">Alejar imán</button><button id="flip">Invertir polos</button><button id="reset">Reiniciar</button>
+</div>
+<div class="status" id="status">Arrastra el imán hacia la muestra. Los momentos magnéticos se orientarán solo parcialmente y la atracción será débil.</div>
+<div class="readouts">
+<div class="metric"><small>Orientación promedio</small><strong id="alignment">0 %</strong></div>
+<div class="metric"><small>Respuesta magnética</small><strong id="response">Muy débil</strong></div>
+</div>
+<p class="note">A diferencia del ferromagnetismo, al retirar el campo externo los momentos paramagnéticos vuelven a quedar desordenados: no conservan una magnetización remanente apreciable.</p>
+</section>
+<aside class="panel">
+<h2>2. ¿Qué estás observando?</h2>
+<p class="note">En un material paramagnético, los átomos o iones poseen momentos magnéticos que normalmente están orientados al azar por la agitación térmica.</p>
+<p class="note">Al acercar un imán, el campo externo hace que una parte de esos momentos tienda a orientarse en la dirección del campo. La respuesta es <b>débil</b>, por lo que el material es atraído ligeramente.</p>
+<p class="note">Cuando el imán se aleja, desaparece la influencia del campo y la agitación térmica vuelve a desordenar los momentos.</p>
+<h2 style="margin-top:18px">3. Pasos del experimento</h2>
+<ol><li>Observa las flechas en diferentes direcciones.</li><li>Acerca el imán al material.</li><li>Observa la orientación parcial de los momentos.</li><li>Aleja el imán y comprueba que vuelven al desorden.</li><li>Invierte los polos y compara la dirección de orientación.</li></ol>
+<div class="tip"><b>Concepto clave:</b> el paramagnetismo produce una atracción débil y temporal. No suele dejar magnetización cuando se retira el campo externo.</div>
+</aside>
+</main>
+<script>
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d'),W=900,H=570;
+const sample={x:185,y:170,w:535,h:320};
+let magnet={x:75,y:285,angle:0},drag=false,offset={x:0,y:0},flipped=false;
+const moments=[];function rand(a,b){return a+Math.random()*(b-a)}
+for(let r=0;r<7;r++)for(let c=0;c<12;c++)moments.push({x:sample.x+27+c*43,y:sample.y+25+r*44,angle:rand(-Math.PI,Math.PI),size:11});
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function norm(a){return Math.atan2(Math.sin(a),Math.cos(a))}
+function fieldAt(x,y){let dx=x-magnet.x,dy=y-magnet.y,dist=Math.hypot(dx,dy)||1,ux=dx/dist,uy=dy/dist,mx=Math.cos(magnet.angle),my=Math.sin(magnet.angle),dot=mx*ux+my*uy,bx=3*dot*ux-mx,by=3*dot*uy-my;let strength=clamp(25000/(dx*dx+dy*dy+12000),0,1);return{angle:Math.atan2(by,bx),strength}}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x+w,y+h,r);ctx.arcTo(x,y+h,x,y+h,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function draw(){
+ ctx.clearRect(0,0,W,H);ctx.fillStyle='#a9c9e5';ctx.font='15px system-ui';ctx.fillText('Arrastra el imán azul con el dedo o el mouse',22,28);
+ rr(sample.x,sample.y,sample.w,sample.h,18);ctx.fillStyle='#102c49';ctx.fill();ctx.strokeStyle='#4d83b4';ctx.lineWidth=3;ctx.stroke();
+ let total=0,oriented=0;
+ moments.forEach(m=>{
+  const f=fieldAt(m.x,m.y);
+  // Paramagnetismo: alineación parcial y proporcional al campo, sin retención al retirarlo.
+  const amount=f.strength*.34;
+  const angle=norm(m.angle+norm(f.angle-m.angle)*amount);
+  if(f.strength>.04){total++;oriented+=amount}
+  const color=f.strength>.2?'#72d9ff':'#3989e8';
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(angle);
+  ctx.globalAlpha=.18;ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,0,18,11,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;ctx.strokeStyle=color;ctx.lineWidth=2.7;ctx.beginPath();ctx.moveTo(-m.size,0);ctx.lineTo(m.size,0);ctx.stroke();
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(m.size+4,0);ctx.lineTo(m.size-3,-5);ctx.lineTo(m.size-3,5);ctx.closePath();ctx.fill();ctx.restore();
+ });
+ ctx.fillStyle='#e0f2ff';ctx.font='bold 17px system-ui';ctx.fillText('MATERIAL PARAMAGNÉTICO',sample.x+145,sample.y+sample.h+30);
+ // Field direction hint around the magnet, restrained to avoid implying strong magnetization.
+ ctx.save();ctx.translate(magnet.x,magnet.y);ctx.rotate(magnet.angle);ctx.shadowColor='#000';ctx.shadowBlur=14;rr(-76,-26,152,52,9);ctx.fillStyle='#2368ad';ctx.fill();ctx.save();ctx.beginPath();ctx.rect(0,-26,76,52);ctx.clip();ctx.fillStyle='#79caff';ctx.fillRect(0,-26,76,52);ctx.restore();ctx.shadowBlur=0;ctx.strokeStyle='#d8efff';ctx.lineWidth=2;rr(-76,-26,152,52,9);ctx.stroke();ctx.fillStyle='#06182a';ctx.font='bold 23px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(flipped?'S':'N',-38,0);ctx.fillText(flipped?'N':'S',38,0);ctx.restore();
+ const avg=moments.reduce((s,m)=>s+fieldAt(m.x,m.y).strength*.34,0)/moments.length;
+ document.getElementById('alignment').textContent=Math.round(avg*100)+' %';
+ document.getElementById('response').textContent=avg>.12?'Débil, pero visible':avg>.035?'Muy débil':'Casi nula';
+ const st=document.getElementById('status');
+ if(avg>.12)st.textContent='El imán está cerca: los momentos se orientan parcialmente con el campo. La respuesta paramagnética sigue siendo débil.';
+ else if(avg>.035)st.textContent='El campo ejerce una influencia pequeña. Solo una fracción de los momentos se orienta con él.';
+ else st.textContent='El campo casi no influye en la muestra. Acerca el imán para observar la orientación parcial.';
+}
+function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+function hit(p){let dx=p.x-magnet.x,dy=p.y-magnet.y,a=-magnet.angle,lx=dx*Math.cos(a)-dy*Math.sin(a),ly=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(lx)<88&&Math.abs(ly)<40}
+canvas.addEventListener('pointerdown',e=>{let p=pos(e);if(hit(p)){drag=true;offset={x:p.x-magnet.x,y:p.y-magnet.y};canvas.setPointerCapture(e.pointerId)}});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;let p=pos(e);magnet.x=clamp(p.x-offset.x,80,820);magnet.y=clamp(p.y-offset.y,65,510);draw()});
+canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('pointercancel',()=>drag=false);
+document.getElementById('near').onclick=()=>{magnet.x=sample.x-65;magnet.y=sample.y+sample.h/2;draw()};
+document.getElementById('far').onclick=()=>{magnet.x=65;magnet.y=65;draw()};
+document.getElementById('flip').onclick=()=>{flipped=!flipped;magnet.angle+=Math.PI;draw()};
+document.getElementById('reset').onclick=()=>{magnet={x:75,y:285,angle:0};flipped=false;moments.forEach(m=>m.angle=rand(-Math.PI,Math.PI));draw()};
+draw();
+</script></body></html>
